@@ -180,55 +180,30 @@ class CalendarPicker(tk.Toplevel):
         # 创建样式
         style = ttk.Style()
         
-        # 获取父窗口的主题
-        is_dark_mode = False
-        if hasattr(self.parent, 'is_dark_mode'):
-            is_dark_mode = self.parent.is_dark_mode
+        # 只使用亮色主题
+        # 日期按钮样式
+        style.configure("Date.TButton", padding=5, background="#ffffff", foreground="#333333")
+        style.map("Date.TButton", background=[("active", "#e0e0e0")])
         
-        # 根据主题设置不同的样式
-        if is_dark_mode:
-            # 暗色主题
-            style.configure("Date.TButton", padding=5, background="#2d2d30", foreground="#ffffff")
-            style.map("Date.TButton", background=[("active", "#404040")])
-            
-            # 选中日期样式
-            style.configure("SelectedDate.TButton", background="#5ba0e5", foreground="white")
-            style.map("SelectedDate.TButton", background=[("active", "#4a90e2")])
-            
-            # 今天日期样式
-            style.configure("TodayDate.TButton", background="#2ecc71", foreground="white")
-            style.map("TodayDate.TButton", background=[("active", "#27ae60")])
-            
-            # 禁用日期样式
-            style.configure("DisabledDate.TButton", foreground="#666666", background="#2d2d30")
-            
-            # 窗口背景
-            self.configure(bg="#1e1e1e")
-        else:
-            # 亮色主题
-            # 日期按钮样式
-            style.configure("Date.TButton", padding=5, background="#ffffff", foreground="#333333")
-            style.map("Date.TButton", background=[("active", "#e0e0e0")])
-            
-            # 选中日期样式
-            style.configure("SelectedDate.TButton", background="#4a90e2", foreground="white")
-            style.map("SelectedDate.TButton", background=[("active", "#357abd")])
-            
-            # 今天日期样式
-            style.configure("TodayDate.TButton", background="#2ecc71", foreground="white")
-            style.map("TodayDate.TButton", background=[("active", "#27ae60")])
-            
-            # 禁用日期样式
-            style.configure("DisabledDate.TButton", foreground="#9e9e9e", background="#ffffff")
-            
-            # 窗口背景
-            self.configure(bg="#f5f5f5")
+        # 选中日期样式
+        style.configure("SelectedDate.TButton", background="#4a90e2", foreground="white")
+        style.map("SelectedDate.TButton", background=[("active", "#357abd")])
+        
+        # 今天日期样式
+        style.configure("TodayDate.TButton", background="#2ecc71", foreground="white")
+        style.map("TodayDate.TButton", background=[("active", "#27ae60")])
+        
+        # 禁用日期样式
+        style.configure("DisabledDate.TButton", foreground="#9e9e9e", background="#ffffff")
+        
+        # 窗口背景
+        self.configure(bg="#f5f5f5")
 
 class TodoApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Todo List")
-        self.root.geometry("500x600")
+        self.root.geometry("650x700")
         self.root.resizable(True, True)
         
         # 使用系统默认的标题栏，以便正常使用最小化功能
@@ -252,6 +227,7 @@ class TodoApp:
         # 窗口拖动相关变量
         self.drag_x = 0
         self.drag_y = 0
+        self.dragging_window = False
         
         # 窗口拖动事件绑定
         self.root.bind("<Button-1>", self.start_drag, add="+")
@@ -262,10 +238,6 @@ class TodoApp:
         
         # 加载任务数据
         self.tasks = self.load_tasks()
-        
-        # 主题相关
-        self.is_dark_mode = False
-        self.load_theme_preference()
         
         # 设置样式
         self.style = ttk.Style()
@@ -304,32 +276,11 @@ class TodoApp:
         
         # 设置数据文件路径
         self.data_file = os.path.join(self.data_dir, "todos.json")
-        # 设置主题偏好文件路径
-        self.theme_file = os.path.join(self.data_dir, "theme.json")
-    
-    def load_theme_preference(self):
-        """加载用户的主题偏好设置"""
-        try:
-            if os.path.exists(self.theme_file):
-                with open(self.theme_file, "r", encoding="utf-8") as f:
-                    theme_data = json.load(f)
-                    self.is_dark_mode = theme_data.get("dark_mode", False)
-        except Exception as e:
-            print(f"加载主题偏好失败: {e}")
-            self.is_dark_mode = False
-    
-    def save_theme_preference(self):
-        """保存用户的主题偏好设置"""
-        try:
-            with open(self.theme_file, "w", encoding="utf-8") as f:
-                json.dump({"dark_mode": self.is_dark_mode}, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"保存主题偏好失败: {e}")
     
     def define_color_schemes(self):
-        """定义亮色和暗色主题的颜色方案"""
-        # 亮色主题
-        self.light_theme = {
+        """定义颜色方案"""
+        # 只保留亮色主题
+        self.theme = {
             "primary_color": "#4a90e2",
             "secondary_color": "#50e3c2",
             "danger_color": "#e74c3c",
@@ -344,30 +295,13 @@ class TodoApp:
             "scrollbar_trough": "#f0f0f0"
         }
         
-        # 暗色主题
-        self.dark_theme = {
-            "primary_color": "#5ba0e5",
-            "secondary_color": "#50e3c2",
-            "danger_color": "#e74c3c",
-            "warning_color": "#f39c12",
-            "success_color": "#2ecc71",
-            "background_color": "#1e1e1e",
-            "card_color": "#2d2d30",
-            "text_color": "#cccccc",
-            "text_light": "#999999",
-            "border_color": "#444444",
-            "scrollbar_bg": "#444444",
-            "scrollbar_trough": "#333333"
-        }
-        
         # 当前主题颜色
-        self.current_theme = self.light_theme.copy()
+        self.current_theme = self.theme.copy()
     
     def apply_theme(self):
         """应用当前主题的颜色方案"""
         # 获取当前主题的颜色
-        colors = self.dark_theme if self.is_dark_mode else self.light_theme
-        self.current_theme = colors.copy()
+        colors = self.theme
         
         # 应用窗口背景色
         self.root.configure(bg=colors["background_color"])
@@ -375,42 +309,42 @@ class TodoApp:
         # 配置全局样式
         # 标题栏样式
         self.style.configure("Title.TFrame", background=colors["card_color"], relief="flat")
-        self.style.configure("Title.TLabel", background=colors["card_color"], foreground=colors["primary_color"], font=("Segoe UI", 18, "bold"))
+        self.style.configure("Title.TLabel", background=colors["card_color"], foreground=colors["primary_color"], font=("Segoe UI", 20, "bold"))
         
         # 按钮样式
-        self.style.configure("Close.TButton", background=colors["card_color"], foreground=colors["text_light"], borderwidth=0, font=("Segoe UI", 12))
+        self.style.configure("Close.TButton", background=colors["card_color"], foreground=colors["text_light"], borderwidth=0, font=("Segoe UI", 15))
         self.style.map("Close.TButton", background=[("active", colors["danger_color"]), ("hover", "#ff6b6b")], foreground=[("active", "white"), ("hover", "white")])
         
-        self.style.configure("Add.TButton", background=colors["primary_color"], foreground="white", borderwidth=0, font=("Segoe UI", 11, "bold"), padding=10)
+        self.style.configure("Add.TButton", background=colors["primary_color"], foreground="white", borderwidth=0, font=("Segoe UI", 15, "bold"), padding=10)
         self.style.map("Add.TButton", background=[("active", "#357abd"), ("hover", "#5aa0e5")])
         
-        self.style.configure("Edit.TButton", background=colors["secondary_color"], foreground="white", borderwidth=0, font=("Segoe UI", 11), padding=8)
+        self.style.configure("Edit.TButton", background=colors["secondary_color"], foreground="white", borderwidth=0, font=("Segoe UI", 15), padding=8)
         self.style.map("Edit.TButton", background=[("active", "#3bc1a0"), ("hover", "#62e6c3")])
         
-        self.style.configure("Delete.TButton", background=colors["danger_color"], foreground="white", borderwidth=0, font=("Segoe UI", 11), padding=8)
+        self.style.configure("Delete.TButton", background=colors["danger_color"], foreground="white", borderwidth=0, font=("Segoe UI", 15), padding=8)
         self.style.map("Delete.TButton", background=[("active", "#c0392b"), ("hover", "#ea6153")])
         
-        self.style.configure("ToggleStatus.TButton", background=colors["warning_color"], foreground="white", borderwidth=0, font=("Segoe UI", 11), padding=8)
+        self.style.configure("ToggleStatus.TButton", background=colors["warning_color"], foreground="white", borderwidth=0, font=("Segoe UI", 15), padding=8)
         self.style.map("ToggleStatus.TButton", background=[("active", "#d35400"), ("hover", "#f5b041")])
         
         # 输入区域样式
-        self.style.configure("Input.TLabelframe", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 12, "bold"), relief="flat")
-        self.style.configure("Input.TLabelframe.Label", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 12, "bold"))
+        self.style.configure("Input.TLabelframe", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 15, "bold"), relief="flat")
+        self.style.configure("Input.TLabelframe.Label", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 15, "bold"))
         
         # 列表区域样式
-        self.style.configure("List.TLabelframe", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 12, "bold"), relief="flat")
-        self.style.configure("List.TLabelframe.Label", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 12, "bold"))
+        self.style.configure("List.TLabelframe", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 15, "bold"), relief="flat")
+        self.style.configure("List.TLabelframe.Label", background=colors["background_color"], foreground=colors["primary_color"], font=("Segoe UI", 15, "bold"))
         
         # 标签样式
-        self.style.configure("Label.TLabel", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 11))
+        self.style.configure("Label.TLabel", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 15))
         
         # 输入框样式
-        self.style.configure("Entry.TEntry", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 11), padding=8, relief="solid", bordercolor=colors["border_color"])
+        self.style.configure("Entry.TEntry", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 15), padding=8, relief="solid", bordercolor=colors["border_color"])
         self.style.map("Entry.TEntry", bordercolor=[("focus", colors["primary_color"]), ("hover", colors["border_color"])], relief=[("focus", "solid"), ("hover", "solid")])
         
         # 树状图样式
-        self.style.configure("TaskTree.Treeview", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 10), rowheight=25)
-        self.style.configure("TaskTree.Treeview.Heading", background=colors["primary_color"], foreground="white", font=("Segoe UI", 11, "bold"), padding=10)
+        self.style.configure("TaskTree.Treeview", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 14), rowheight=35)
+        self.style.configure("TaskTree.Treeview.Heading", background=colors["primary_color"], foreground="white", font=("Segoe UI", 15, "bold"), padding=10)
         self.style.map("TaskTree.Treeview.Heading", background=[("active", "#357abd")])
         self.style.configure("TaskTree.Treeview.Cell", background=colors["card_color"], foreground=colors["text_color"])
         
@@ -420,7 +354,7 @@ class TodoApp:
         
         # Pin按钮样式
         self.style.configure("Pin.TFrame", background=colors["background_color"])
-        self.style.configure("Toggle.TCheckbutton", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 12))
+        self.style.configure("Toggle.TCheckbutton", background=colors["card_color"], foreground=colors["text_color"], font=("Segoe UI", 15))
         
         # 操作区域样式
         self.style.configure("Action.TFrame", background=colors["background_color"])
@@ -443,15 +377,9 @@ class TodoApp:
         # 在create_widgets中已经实现了卡片式布局
     
     def create_widgets(self):
-        # 固定/取消固定按钮和主题切换按钮
+        # 固定/取消固定按钮
         pin_frame = ttk.Frame(self.root, style="Pin.TFrame")
         pin_frame.pack(fill=tk.X, padx=15, pady=5)
-        
-        # 主题切换按钮
-        self.theme_var = tk.BooleanVar(value=self.is_dark_mode)
-        theme_btn = ttk.Checkbutton(pin_frame, text="🌙 暗色模式", variable=self.theme_var, 
-                                 command=self.toggle_theme, style="Toggle.TCheckbutton")
-        theme_btn.pack(side=tk.RIGHT, padx=5)
         
         # 固定/取消固定按钮
         self.pin_var = tk.BooleanVar(value=True)
@@ -465,7 +393,7 @@ class TodoApp:
         
         # 任务描述输入
         ttk.Label(input_frame, text="任务:", style="Label.TLabel").pack(anchor=tk.W, padx=10, pady=(10, 0))
-        self.task_entry = ttk.Entry(input_frame, style="Entry.TEntry", font=("Segoe UI", 11))
+        self.task_entry = ttk.Entry(input_frame, style="Entry.TEntry")
         self.task_entry.pack(fill=tk.X, padx=10, pady=5)
         
         # 截止日期输入
@@ -475,7 +403,7 @@ class TodoApp:
         date_frame = ttk.Frame(input_frame)
         date_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        self.date_entry = ttk.Entry(date_frame, style="Entry.TEntry", font=("Segoe UI", 11))
+        self.date_entry = ttk.Entry(date_frame, style="Entry.TEntry")
         self.date_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
         
         # 日历按钮
@@ -491,14 +419,16 @@ class TodoApp:
         list_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
         
         # 任务列表
-        columns = ("id", "task", "due_date", "status", "edit", "delete")
+        columns = ("id", "task", "due_date", "status", "up", "down", "edit", "delete")
         self.task_tree = ttk.Treeview(list_frame, columns=columns, show="headings", style="TaskTree.Treeview")
         
         # 设置列宽
         self.task_tree.column("id", width=40, anchor=tk.CENTER)
-        self.task_tree.column("task", width=200, anchor=tk.W)
+        self.task_tree.column("task", width=150, anchor=tk.W)
         self.task_tree.column("due_date", width=100, anchor=tk.CENTER)
         self.task_tree.column("status", width=60, anchor=tk.CENTER)
+        self.task_tree.column("up", width=40, anchor=tk.CENTER)
+        self.task_tree.column("down", width=40, anchor=tk.CENTER)
         self.task_tree.column("edit", width=50, anchor=tk.CENTER)
         self.task_tree.column("delete", width=50, anchor=tk.CENTER)
         
@@ -507,11 +437,22 @@ class TodoApp:
         self.task_tree.heading("task", text="任务", anchor=tk.W)
         self.task_tree.heading("due_date", text="截止日期", anchor=tk.CENTER)
         self.task_tree.heading("status", text="状态", anchor=tk.CENTER)
+        self.task_tree.heading("up", text="↑", anchor=tk.CENTER)
+        self.task_tree.heading("down", text="↓", anchor=tk.CENTER)
         self.task_tree.heading("edit", text="编辑", anchor=tk.CENTER)
         self.task_tree.heading("delete", text="删除", anchor=tk.CENTER)
         
-        # 添加点击事件处理
-        self.task_tree.bind("<Button-1>", self.on_tree_click)
+        # 添加事件处理
+        # 使用ButtonPress-1而不是Button-1，以确保事件处理的顺序
+        self.task_tree.bind("<ButtonPress-1>", self.on_tree_click)
+        self.task_tree.bind("<B1-Motion>", self.on_tree_drag)
+        self.task_tree.bind("<ButtonRelease-1>", self.on_tree_release)
+        
+        # 列宽调整相关变量
+        self.resize_column_mode = False
+        self.resize_column = None
+        self.resize_start_x = 0
+        self.resize_start_width = 0
         
         # 滚动条
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.task_tree.yview)
@@ -540,15 +481,20 @@ class TodoApp:
     
     def start_drag(self, event):
         # 只有在非调整大小模式下才记录拖动起始位置
+        if hasattr(self, "task_tree") and event.widget == self.task_tree:
+            self.dragging_window = False
+            return
+        
         if not self.resize_mode:
-            self.drag_x = event.x
-            self.drag_y = event.y
+            self.dragging_window = True
+            self.drag_x = event.x_root
+            self.drag_y = event.y_root
     
     def drag_window(self, event):
         # 只有在非调整大小模式下才允许拖动窗口
-        if not self.resize_mode:
-            x = self.root.winfo_x() + (event.x - self.drag_x)
-            y = self.root.winfo_y() + (event.y - self.drag_y)
+        if not self.resize_mode and self.dragging_window:
+            x = self.root.winfo_x() + (event.x_root - self.drag_x)
+            y = self.root.winfo_y() + (event.y_root - self.drag_y)
             self.root.geometry(f"+{x}+{y}")
     
     def on_motion(self, event):
@@ -578,6 +524,11 @@ class TodoApp:
     
     def start_resize(self, event):
         """处理调整大小的开始事件"""
+        if hasattr(self, "task_tree") and event.widget == self.task_tree:
+            self.resize_mode = False
+            self.resize_edge = None
+            return
+        
         # 窗口边缘检测的阈值
         edge_threshold = 10
         
@@ -649,13 +600,7 @@ class TodoApp:
         self.resize_mode = False
         self.resize_edge = None
         self.root.config(cursor="arrow")
-    
-    def toggle_theme(self):
-        """切换亮色/暗色主题"""
-        self.is_dark_mode = not self.is_dark_mode
-        self.theme_var.set(self.is_dark_mode)
-        self.apply_theme()
-        self.save_theme_preference()
+        self.dragging_window = False
     
     def show_calendar(self):
         """显示日历选择器"""
@@ -762,7 +707,7 @@ class TodoApp:
             self.task_tree.delete(item)
         
         # 获取当前主题颜色
-        colors = self.dark_theme if self.is_dark_mode else self.light_theme
+        colors = self.theme
         
         # 定义标签样式
         self.task_tree.tag_configure("completed", foreground=colors["text_light"])
@@ -787,15 +732,70 @@ class TodoApp:
                 task_text,
                 task["due_date"] if task["due_date"] else "无",
                 status,
+                "↑",
+                "↓",
                 "✏️",
                 "🗑️"
             ), tags=tags)
     
     def on_tree_click(self, event):
         """处理任务列表点击事件"""
-        # 获取点击的行和列
+        # 获取点击的区域和位置
         region = self.task_tree.identify_region(event.x, event.y)
-        if region == "cell":
+        
+        if region == "heading":
+            # 获取点击的列
+            column_id = self.task_tree.identify_column(event.x)
+            
+            # 获取树的可见区域
+            visible_region = self.task_tree.bbox("#0")
+            if visible_region:
+                # 计算点击位置是否在列边缘
+                # 获取所有列的实际位置
+                col_info = []
+                current_x = 0
+                for i, col in enumerate(self.task_tree["columns"]):
+                    width = self.task_tree.column(col, "width")
+                    col_info.append({
+                        "name": col,
+                        "id": f"#{i+1}",
+                        "x1": current_x,
+                        "x2": current_x + width
+                    })
+                    current_x += width
+                
+                # 查找点击位置所在的列
+                clicked_col = None
+                for col in col_info:
+                    if col["x1"] <= event.x <= col["x2"]:
+                        clicked_col = col
+                        break
+                
+                if clicked_col:
+                    # 检查是否点击在列的右侧边缘（10像素范围内）
+                    if abs(event.x - clicked_col["x2"]) <= 10:
+                        # 点击在当前列的右侧边缘
+                        self.resize_column_mode = True
+                        self.resize_column = clicked_col["name"]
+                        self.resize_start_x = event.x_root
+                        self.resize_start_width = clicked_col["x2"] - clicked_col["x1"]
+                        # 改变光标样式
+                        self.root.config(cursor="sb_h_double_arrow")
+                    elif clicked_col["id"] != "#1" and abs(event.x - clicked_col["x1"]) <= 10:
+                        # 点击在前一列的右侧边缘
+                        # 找到前一列
+                        prev_col = col_info[col_info.index(clicked_col) - 1]
+                        self.resize_column_mode = True
+                        self.resize_column = prev_col["name"]
+                        self.resize_start_x = event.x_root
+                        self.resize_start_width = prev_col["x2"] - prev_col["x1"]
+                        # 改变光标样式
+                        self.root.config(cursor="sb_h_double_arrow")
+                    else:
+                        # 正常点击列标题，不调整列宽
+                        self.resize_column_mode = False
+                        self.resize_column = None
+        elif region == "cell":
             # 获取行和列
             row_id = self.task_tree.identify_row(event.y)
             column = self.task_tree.identify_column(event.x)
@@ -808,10 +808,69 @@ class TodoApp:
                 if column == "#4":  # status column
                     # 切换任务状态
                     self.toggle_task_status_by_id(task_id)
-                elif column == "#5":  # edit column
+                elif column == "#5":  # up column
+                    # 向上移动任务
+                    self.move_task_up(task_id)
+                elif column == "#6":  # down column
+                    # 向下移动任务
+                    self.move_task_down(task_id)
+                elif column == "#7":  # edit column
                     self.edit_task_by_id(task_id)
-                elif column == "#6":  # delete column
+                elif column == "#8":  # delete column
                     self.delete_task_by_id(task_id)
+    
+    def on_tree_drag(self, event):
+        """处理任务列表拖动事件"""
+        if self.resize_column_mode and self.resize_column:
+            # 计算新的宽度变化
+            delta = event.x_root - self.resize_start_x
+            new_width = max(30, self.resize_start_width + delta)
+            
+            # 设置新的宽度
+            self.task_tree.column(self.resize_column, width=new_width)
+    
+    def on_tree_release(self, event):
+        """处理任务列表释放事件"""
+        if self.resize_column_mode:
+            # 重置调整模式
+            self.resize_column_mode = False
+            self.resize_column = None
+            # 恢复光标样式
+            self.root.config(cursor="arrow")
+    
+    def move_task_up(self, task_id):
+        """将任务向上移动一位"""
+        # 查找任务索引
+        task_index = next((index for index, task in enumerate(self.tasks) if task["id"] == task_id), -1)
+        if task_index <= 0:  # 已经是第一个任务
+            return
+        
+        # 交换任务位置
+        self.tasks[task_index], self.tasks[task_index - 1] = self.tasks[task_index - 1], self.tasks[task_index]
+        
+        # 重新排序ID
+        self.reorder_task_ids()
+        
+        # 保存并更新显示
+        self.save_tasks()
+        self.update_task_list()
+    
+    def move_task_down(self, task_id):
+        """将任务向下移动一位"""
+        # 查找任务索引
+        task_index = next((index for index, task in enumerate(self.tasks) if task["id"] == task_id), -1)
+        if task_index == -1 or task_index >= len(self.tasks) - 1:  # 已经是最后一个任务
+            return
+        
+        # 交换任务位置
+        self.tasks[task_index], self.tasks[task_index + 1] = self.tasks[task_index + 1], self.tasks[task_index]
+        
+        # 重新排序ID
+        self.reorder_task_ids()
+        
+        # 保存并更新显示
+        self.save_tasks()
+        self.update_task_list()
     
     def edit_task(self, task=None):
         """编辑任务，支持回退修改"""
@@ -846,12 +905,13 @@ class TodoApp:
         edit_window.drag_x = 0
         edit_window.drag_y = 0
         
-        # 添加窗口拖动功能
+        # 添加窗口拖动功能（仅标题栏区域）
         def edit_start_drag(event):
-            # 开始拖动
-            edit_window.dragging = True
-            edit_window.drag_x = event.x
-            edit_window.drag_y = event.y
+            # 只有在标题栏区域点击才允许拖动
+            if event.y < 30:  # 标题栏高度约30像素
+                edit_window.dragging = True
+                edit_window.drag_x = event.x
+                edit_window.drag_y = event.y
         
         def edit_drag_window(event):
             # 只有在拖动状态下才允许移动窗口
@@ -864,13 +924,13 @@ class TodoApp:
             # 结束拖动
             edit_window.dragging = False
         
-        # 绑定拖动事件
+        # 绑定拖动事件（仅在窗口空白处允许拖动）
         edit_window.bind("<Button-1>", edit_start_drag, add="+")
         edit_window.bind("<B1-Motion>", edit_drag_window, add="+")
         edit_window.bind("<ButtonRelease-1>", edit_stop_drag, add="+")
         
         # 设置窗口样式，根据当前主题设置背景色
-        colors = self.dark_theme if self.is_dark_mode else self.light_theme
+        colors = getattr(self, "current_theme", self.theme)
         edit_window.configure(bg=colors["background_color"])
         
         # 创建编辑表单
@@ -880,13 +940,13 @@ class TodoApp:
         # 任务描述
         ttk.Label(form_frame, text="任务描述:", style="Label.TLabel").grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
         task_entry = ttk.Entry(form_frame, width=40, style="Entry.TEntry", font=("Segoe UI", 11))
-        task_entry.insert(0, task["task"])
+        task_entry.insert(0, task.get("task", ""))
         task_entry.grid(row=1, column=0, columnspan=2, sticky=tk.EW, pady=(0, 15))
         
         # 截止日期
         ttk.Label(form_frame, text="截止日期 (YYYY-MM-DD):", style="Label.TLabel").grid(row=2, column=0, sticky=tk.W, pady=(0, 5))
         date_entry = ttk.Entry(form_frame, width=40, style="Entry.TEntry", font=("Segoe UI", 11))
-        date_entry.insert(0, task["due_date"])
+        date_entry.insert(0, task.get("due_date", ""))
         date_entry.grid(row=3, column=0, columnspan=2, sticky=tk.EW, pady=(0, 20))
         
         # 保存按钮
@@ -966,6 +1026,8 @@ class TodoApp:
         if messagebox.askyesno("确认删除", "确定要删除这个任务吗？"):
             # 删除任务
             self.tasks = [t for t in self.tasks if t["id"] != task_id]
+            # 重新排序ID
+            self.reorder_task_ids()
             self.save_tasks()
             self.update_task_list()
     
@@ -1005,9 +1067,17 @@ class TodoApp:
         if messagebox.askyesno("确认删除", f"确定要删除所有已完成的任务吗？共 {len(completed_tasks)} 个任务。"):
             # 删除已完成的任务
             self.tasks = [task for task in self.tasks if not task["completed"]]
+            # 重新排序ID
+            self.reorder_task_ids()
             self.save_tasks()
             self.update_task_list()
             messagebox.showinfo("删除成功", f"已成功删除 {len(completed_tasks)} 个已完成的任务！")
+    
+    def reorder_task_ids(self):
+        """重新排序任务ID，确保ID连续"""
+        # 重新排序ID
+        for index, task in enumerate(self.tasks):
+            task["id"] = index + 1
     
     def delete_task_by_id(self, task_id):
         """根据ID删除任务"""
@@ -1020,9 +1090,13 @@ class TodoApp:
         if messagebox.askyesno("确认删除", f"确定要删除任务 '{task['task']}' 吗？"):
             # 删除任务
             self.tasks = [t for t in self.tasks if t["id"] != task_id]
+            # 重新排序ID
+            self.reorder_task_ids()
             self.save_tasks()
             self.update_task_list()
             messagebox.showinfo("删除成功", f"任务 '{task['task']}' 已成功删除！")
+    
+
     
     def edit_task_by_id(self, task_id):
         """根据ID编辑任务"""
@@ -1039,6 +1113,14 @@ class TodoApp:
 if __name__ == "__main__":
     # 创建主窗口
     root = tk.Tk()
+    
+    # 优化字体渲染，解决字体边缘模糊问题
+    try:
+        # 启用抗锯齿渲染
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception as e:
+        print(f"无法启用字体优化: {e}")
     
     # 创建应用
     app = TodoApp(root)
